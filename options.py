@@ -470,3 +470,141 @@ def settings():
         def save(self):
             return str(self.percent)
 
+        def draw(self):
+            pygame.draw.rect(screen, (40, 40, 40), self.rect)
+            pygame.draw.rect(screen, (153, 153, 153), (self.rect.x, self.rect.y,
+                                                       round(self.rect.w * self.percent / 100), self.rect.h))
+            screen.blit(self.image, (self.rect.x, self.rect.y))
+            btnW_1 = btn_font.render(str(self.percent), True, pygame.Color("White"))
+            screen.blit(btnW_1, (self.rect[0] + self.rect[2] // 2 - btnW_1.get_width() // 2,
+                                 self.rect[1] + self.rect[3] // 2 - btnW_1.get_height() // 2))
+
+            if self.rect.collidepoint(pygame.mouse.get_pos()):
+                pygame.draw.rect(screen, (255, 255, 153), self.rect, round(HEIGHT / 240))
+
+        def change_percent(self, pos):
+            x, y = pos
+            self.percent = round((x - self.rect.x) * 100 / self.rect.w)
+
+    class Button:
+        def __init__(self, x, y, title, key):
+            self.image = pygame.transform.scale(load_image('cell_inv.png'), (round(WIDTH / 12.8), round(WIDTH / 12.8)))
+            self.rect = self.image.get_rect()
+            self.rect.x, self.rect.y = x, y
+            self.title = title
+            self.key = key.upper()
+            self.choosed = False
+            self.parent = None
+
+        def save(self):
+            return self.key.lower()
+
+        def choose(self):
+            self.choosed = not self.choosed
+
+        def draw(self):
+            screen.blit(self.image, (self.rect.x, self.rect.y))
+            btnW_1 = btn_font.render(self.key, True, pygame.Color("White"))
+            screen.blit(btnW_1, (self.rect[0] + self.rect[2] // 2 - btnW_1.get_width() // 2,
+                                 self.rect[1] + self.rect[3] // 2 - btnW_1.get_height() // 2))
+            if self.choosed:
+                pygame.draw.rect(screen, (153, 255, 153), self.rect, round(HEIGHT / 240))
+            elif self.rect.collidepoint(pygame.mouse.get_pos()):
+                pygame.draw.rect(screen, (255, 255, 153), self.rect, round(HEIGHT / 240))
+
+        def change_btn(self, event):
+            if event.key == pygame.K_LEFT:
+                for i in self.parent:
+                    if i.key == 'left':
+                        i.key = ''
+                self.key = 'left'
+            elif event.key == pygame.K_RIGHT:
+                for i in self.parent:
+                    if i.key == 'right':
+                        i.key = ''
+                self.key = 'right'
+            elif event.key == pygame.K_UP:
+                for i in self.parent:
+                    if i.key == 'up':
+                        i.key = ''
+                self.key = 'up'
+            elif event.key == pygame.K_DOWN:
+                for i in self.parent:
+                    if i.key == 'down':
+                        i.key = ''
+                self.key = 'down'
+            elif event.unicode.lower() in 'qwertyuiopasdfghjklzxcvbnm' and event.unicode != '':
+                print(event.unicode)
+                for i in self.parent:
+                    if i.key == event.unicode.upper():
+                        i.key = ''
+                self.key = event.unicode.upper()
+
+        def set_parent(self, parent):
+            self.parent = parent
+
+    bg = pygame.transform.scale(SETTINGS_BG, (round(GAME_WIN / 1.05), round(HEIGHT / 1.5)))
+    bg_rect = bg.get_rect()
+    #####
+    # Buttons
+    btnF = Button(bg_rect.x + WIDTH // 4.7, bg_rect.y + HEIGHT // 4, 'BTN_F', option_list[1])
+    btnL = Button(bg_rect.x + WIDTH // 8, bg_rect.y + HEIGHT // 2.5, 'BTN_L', option_list[2])
+    btnR = Button(bg_rect.x + WIDTH // 3.3, bg_rect.y + HEIGHT // 2.5, 'BTN_R', option_list[3])
+    btnB = Button(bg_rect.x + WIDTH // 4.7, bg_rect.y + HEIGHT // 2.4, 'BTN_B', option_list[4])
+    btnI = Button(bg_rect.x + GAME_WIN * 0.75, bg_rect.y + HEIGHT // 3.4, 'BTN_INTERACT', option_list[5])
+    all_btns = [btnF, btnL, btnR, btnB, btnI]
+    [i.set_parent(all_btns) for i in all_btns]
+    # Sens Bar
+    sensBar = Bar(bg_rect.x + GAME_WIN * 0.47, bg_rect.y + HEIGHT // 1.4, option_list[0])
+    # Window Size
+    btnWin = BtnSize(bg_rect.x + GAME_WIN * 0.16, bg_rect.y + HEIGHT // 1.5, option_list[7])
+    #####
+    all_obj = [sensBar]
+    all_obj.extend(all_btns)
+    all_obj.append(btnWin)
+    menu = True
+    choosed_btn = None
+    while menu:
+        screen.fill((0, 0, 0))
+
+        # Картинка с лого
+        screen.blit(pygame.transform.scale(LOGO, (RECT_GAME_WINDOW.w,
+                                                  HEIGHT)), (0, 0))
+
+        # Отрисовка элементов
+        screen.blit(bg, (round(GAME_WIN / 2 - bg.get_width() / 2),
+                         round(HEIGHT / 2 - bg.get_height() / 2)))
+        [btn.draw() for btn in all_btns]
+        sensBar.draw()
+        btnWin.draw()
+
+        work_with_menu('settings')
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if RECT_PLAY.collidepoint(event.pos):
+                    BTN_SOUND.play()
+                    return [obj.save() for obj in all_obj]
+                elif RECT_SETTINGS.collidepoint(event.pos):
+                    BTN_SOUND.play()
+                    return [None]
+                elif sensBar.rect.collidepoint(event.pos):
+                    BTN_SOUND.play()
+                    sensBar.change_percent(event.pos)
+                elif btnWin.rect.collidepoint(event.pos):
+                    BTN_SOUND.play()
+                    btnWin.change_size()
+                else:
+                    choosed_btn = None
+                    for btn in all_btns:
+                        btn.choosed = False
+                        if btn.rect.collidepoint(event.pos):
+                            BTN_SOUND.play()
+                            btn.choose()
+                            choosed_btn = btn
+            elif event.type == pygame.KEYDOWN:
+                if choosed_btn is not None:
+                    choosed_btn.change_btn(event)
+
+        pygame.display.flip()
